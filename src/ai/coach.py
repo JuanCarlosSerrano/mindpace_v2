@@ -1,0 +1,9 @@
+class CoachAI:
+    def evaluar_plan(self, atleta, plan, analisis):
+        ...
+
+    def proponer_ajustes(self):
+        ...
+
+    def explicar_decisiones(self):
+        ...
