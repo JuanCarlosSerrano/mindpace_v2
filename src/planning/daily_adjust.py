@@ -1,3 +1,6 @@
+from decimal import Decimal, ROUND_HALF_UP
+
+
 def ajustar_entrenamientos_diarios(entrenamientos, alertas_semana):
     """
     Ajusta entrenamientos individuales según alertas semanales.
@@ -14,7 +17,9 @@ def ajustar_entrenamientos_diarios(entrenamientos, alertas_semana):
 
             # Reducir volumen
             if e.volumen_objetivo:
-                nuevo_vol = round(e.volumen_objetivo * 0.85, 1)
+                nuevo_vol = (e.volumen_objetivo * Decimal("0.85")).quantize(
+                    Decimal("0.1"), rounding=ROUND_HALF_UP
+                )
                 ajuste["acciones"].append(
                     f"Reducir volumen de {e.volumen_objetivo} km a {nuevo_vol} km"
                 )
