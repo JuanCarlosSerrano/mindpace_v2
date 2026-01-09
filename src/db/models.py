@@ -1,8 +1,9 @@
 from datetime import datetime, date
-
+from sqlalchemy.orm import validates
+from decimal import Decimal
 from sqlalchemy import (
     String, Integer, Date, Boolean, ForeignKey,
-    Enum, Text, DECIMAL, TIMESTAMP
+    Enum, Text, DECIMAL, TIMESTAMP, JSON
 )
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -125,13 +126,37 @@ class EntrenamientoPlanificado(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     plan_id: Mapped[int] = mapped_column(ForeignKey("planes_atleta.id"))
     fecha: Mapped[Date] = mapped_column(Date)
-
     tipo_sesion: Mapped[str | None] = mapped_column(String(50))
     volumen_objetivo: Mapped[float | None] = mapped_column(DECIMAL(6, 2))
     ritmo_objetivo: Mapped[int | None]
     detalle_series: Mapped[str | None] = mapped_column(String(150))
     comentarios_entrenador: Mapped[str | None] = mapped_column(Text)
+    realizado_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "entrenamientos_realizados.id",
+            use_alter=True,
+            name="fk_planificado_realizado_id",
+        )
+    )
+    
+    # 🔒 CORTAFUEGOS DE UNIDADES
+    @validates("volumen_objetivo")
+    def validate_volumen_objetivo(self, key, value):
+        if value is None:
+            return value
 
+        v = Decimal(str(value))
+
+        if v < 0:
+            raise ValueError("volumen_objetivo no puede ser negativo")
+
+        if v > Decimal("60"):
+            raise ValueError(
+                f"volumen_objetivo={v} km no es razonable para una sesión. "
+                "¿Error de unidades? (esperado km reales)"
+            )
+
+        return v
     plan = relationship("PlanAtleta", back_populates="entrenamientos")
 class EntrenamientoRealizado(Base):
     __tablename__ = "entrenamientos_realizados"
@@ -143,6 +168,7 @@ class EntrenamientoRealizado(Base):
     origen: Mapped[str | None] = mapped_column(
         Enum("manual", "strava", "garmin", "polar", name="origen_entreno")
     )
+    tipo_sesion: Mapped[str | None] = mapped_column(String(20))
     actividad_id_externa: Mapped[str | None] = mapped_column(String(100))
 
     distancia_km: Mapped[float | None] = mapped_column(DECIMAL(6, 2))
@@ -154,15 +180,36 @@ class EntrenamientoRealizado(Base):
 
     sensacion: Mapped[int | None]
     comentarios: Mapped[str | None] = mapped_column(Text)
+    planificado_id: Mapped[int | None] = mapped_column(
+        ForeignKey("entrenamientos_planificados.id")
+    )
+    match_confianza: Mapped[float | None] = mapped_column(DECIMAL(4, 2))
+    match_metodo: Mapped[str | None] = mapped_column(String(20))
 class ComparacionPlanReal(Base):
     __tablename__ = "comparacion_plan_real"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    plan_id: Mapped[int | None] = mapped_column(ForeignKey("planes_atleta.id"))
+    atleta_id: Mapped[int | None] = mapped_column(ForeignKey("atletas.id"))
+    fecha: Mapped[Date | None] = mapped_column(Date)
     entrenamiento_planificado_id: Mapped[int] = mapped_column(
         ForeignKey("entrenamientos_planificados.id")
     )
     entrenamiento_realizado_id: Mapped[int] = mapped_column(
         ForeignKey("entrenamientos_realizados.id")
+    )
+
+    dist_plan_km: Mapped[float | None] = mapped_column(DECIMAL(6, 2))
+    dist_real_km: Mapped[float | None] = mapped_column(DECIMAL(6, 2))
+    pct_dist: Mapped[float | None] = mapped_column(DECIMAL(5, 2))
+
+    ritmo_plan: Mapped[int | None]
+    ritmo_real: Mapped[int | None]
+    delta_ritmo: Mapped[int | None]
+
+    sensacion: Mapped[int | None]
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, default=datetime.utcnow
     )
 
     cumplimiento_pct: Mapped[float | None] = mapped_column(DECIMAL(5, 2))
@@ -195,3 +242,23 @@ class Recomendacion(Base):
     nivel_confianza: Mapped[float | None] = mapped_column(DECIMAL(4, 2))
 
     aplicada: Mapped[bool] = mapped_column(Boolean, default=False)
+
+class CoachAction(Base):
+    __tablename__ = "coach_actions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    plan_id: Mapped[int] = mapped_column(ForeignKey("planes_atleta.id"))
+    semana: Mapped[str | None] = mapped_column(String(10))
+    fecha: Mapped[Date | None] = mapped_column(Date)
+    tipo: Mapped[str] = mapped_column(
+        Enum("semanal", "diaria", "reversion", name="tipo_coach_action"),
+        nullable=False
+    )
+    acciones: Mapped[dict | list] = mapped_column(JSON, nullable=False)
+    estado: Mapped[str] = mapped_column(
+        Enum("aplicada", "revertida", name="estado_coach_action"),
+        default="aplicada"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, default=datetime.utcnow
+    )

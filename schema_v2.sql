@@ -76,8 +76,10 @@ CREATE TABLE entrenamientos_planificados (
     detalle_series VARCHAR(150),
 
     comentarios_entrenador TEXT,
+    realizado_id INT,
 
-    FOREIGN KEY (plan_id) REFERENCES planes_atleta(id)
+    FOREIGN KEY (plan_id) REFERENCES planes_atleta(id),
+    FOREIGN KEY (realizado_id) REFERENCES entrenamientos_realizados(id)
 );
 CREATE TABLE entrenamientos_realizados (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -85,6 +87,7 @@ CREATE TABLE entrenamientos_realizados (
     fecha DATE NOT NULL,
 
     origen ENUM('manual', 'strava', 'garmin', 'polar'),
+    tipo_sesion VARCHAR(20),
     actividad_id_externa VARCHAR(100),
 
     distancia_km DECIMAL(6,2),
@@ -96,13 +99,31 @@ CREATE TABLE entrenamientos_realizados (
 
     sensacion INT, -- escala 1-10
     comentarios TEXT,
+    planificado_id INT,
+    match_confianza DECIMAL(4,2),
+    match_metodo VARCHAR(20),
 
-    FOREIGN KEY (atleta_id) REFERENCES atletas(id)
+    FOREIGN KEY (atleta_id) REFERENCES atletas(id),
+    FOREIGN KEY (planificado_id) REFERENCES entrenamientos_planificados(id)
 );
 CREATE TABLE comparacion_plan_real (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    plan_id INT,
+    atleta_id INT,
+    fecha DATE,
     entrenamiento_planificado_id INT NOT NULL,
     entrenamiento_realizado_id INT NOT NULL,
+
+    dist_plan_km DECIMAL(6,2),
+    dist_real_km DECIMAL(6,2),
+    pct_dist DECIMAL(5,2),
+
+    ritmo_plan INT,
+    ritmo_real INT,
+    delta_ritmo INT,
+
+    sensacion INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     cumplimiento_pct DECIMAL(5,2),
     desviacion_volumen DECIMAL(6,2),
@@ -110,6 +131,8 @@ CREATE TABLE comparacion_plan_real (
 
     estado ENUM('ok', 'ajustado', 'fallido'),
 
+    FOREIGN KEY (plan_id) REFERENCES planes_atleta(id),
+    FOREIGN KEY (atleta_id) REFERENCES atletas(id),
     FOREIGN KEY (entrenamiento_planificado_id)
         REFERENCES entrenamientos_planificados(id),
     FOREIGN KEY (entrenamiento_realizado_id)
@@ -139,4 +162,16 @@ CREATE TABLE recomendaciones (
     aplicada BOOLEAN DEFAULT FALSE,
 
     FOREIGN KEY (atleta_id) REFERENCES atletas(id)
+);
+CREATE TABLE coach_actions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    plan_id INT NOT NULL,
+    semana VARCHAR(10),
+    fecha DATE,
+    tipo ENUM('semanal', 'diaria', 'reversion') NOT NULL,
+    acciones JSON NOT NULL,
+    estado ENUM('aplicada', 'revertida') DEFAULT 'aplicada',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (plan_id) REFERENCES planes_atleta(id)
 );

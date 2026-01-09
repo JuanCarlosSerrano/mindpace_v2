@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from typing import Literal
+from decimal import Decimal, ROUND_HALF_UP
 
 @dataclass(frozen=True)
 class AthleteContext:
@@ -81,10 +82,16 @@ def es_semana_descarga(semana: int) -> bool:
     """
     return semana % 4 == 0
 
-
-def aplicar_descarga(volumen: float | None, semana: int) -> float | None:
+def aplicar_descarga(volumen, semana):
     if volumen is None:
         return None
-    if es_semana_descarga(semana):
-        return round(volumen * 0.7, 2)
+
+    if semana % 4 == 0:
+        return (
+            (volumen * Decimal("0.70"))
+            .quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        )
+
     return volumen
+
+

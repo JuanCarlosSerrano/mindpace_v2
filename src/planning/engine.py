@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import date, timedelta
 from sqlalchemy.orm import Session
-
+from decimal import Decimal, ROUND_HALF_UP
 from src.db.models import (
     Atleta, PlantillaPlan, PlantillaSesion,
     PlanAtleta, EntrenamientoPlanificado
@@ -96,11 +96,28 @@ def generar_plan_desde_plantilla(
             float(s.intensidad_pct_vam) if s.intensidad_pct_vam is not None else None,
             ctx
         )
-
-        volumen_obj = ajustar_volumen_sesion(
+       
+        raw_volumen_float = ajustar_volumen_sesion(
             float(s.volumen_base) if s.volumen_base is not None else None,
             ctx
         )
+
+        # Convertimos a Decimal JUSTO AQUÍ
+        raw_volumen = (
+            Decimal(str(raw_volumen_float))
+            if raw_volumen_float is not None
+            else None
+        )
+
+        raw_volumen = aplicar_descarga(raw_volumen, int(s.semana))
+
+        # 🔒 Normalización FINAL: km reales
+        volumen_obj = (
+            raw_volumen.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            if raw_volumen is not None
+            else None
+        )   
+        
         volumen_obj = aplicar_descarga(volumen_obj, int(s.semana))
         
         ritmo_obj = ritmo_objetivo_por_vam(ctx.vam, tipo)

@@ -1,5 +1,5 @@
 from datetime import date
-
+from datetime import timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -70,28 +70,49 @@ def crear_plantilla(session):
     session.commit()
     return plantilla
 def crear_sesiones_plantilla(session, plantilla):
-    sesiones = [
-        PlantillaSesion(
-            plantilla_id=plantilla.id,
-            semana=1,
-            dia_semana=2,
-            tipo_sesion="rodaje",
-            volumen_base=12,
-            intensidad_pct_vam=0.7
-        ),
-        PlantillaSesion(
-            plantilla_id=plantilla.id,
-            semana=1,
-            dia_semana=4,
-            tipo_sesion="series",
-            formato_series="6x1000",
-            intensidad_pct_vam=0.9,
-            recuperacion_seg=120
-        ),
-    ]
+    sesiones = []
+
+    for semana in range(1, 9):  # 8 semanas
+        # Rodaje medio
+        sesiones.append(
+            PlantillaSesion(
+                plantilla_id=plantilla.id,
+                semana=semana,
+                dia_semana=2,
+                tipo_sesion="rodaje",
+                volumen_base=10 + semana,  # progresivo
+                intensidad_pct_vam=0.7
+            )
+        )
+
+        # Series
+        sesiones.append(
+            PlantillaSesion(
+                plantilla_id=plantilla.id,
+                semana=semana,
+                dia_semana=4,
+                tipo_sesion="series",
+                formato_series="6x1000",
+                intensidad_pct_vam=0.9,
+                recuperacion_seg=120
+            )
+        )
+
+        # Rodaje largo
+        sesiones.append(
+            PlantillaSesion(
+                plantilla_id=plantilla.id,
+                semana=semana,
+                dia_semana=6,
+                tipo_sesion="rodaje",
+                volumen_base=14 + semana * 1.5,
+                intensidad_pct_vam=0.65
+            )
+        )
 
     session.add_all(sesiones)
     session.commit()
+
 def crear_plan_atleta(session, atleta, plantilla):
     plan = PlanAtleta(
         atleta_id=atleta.id,
@@ -103,35 +124,59 @@ def crear_plan_atleta(session, atleta, plantilla):
     session.add(plan)
     session.commit()
     return plan
+from datetime import timedelta
+
 def crear_entrenamientos_planificados(session, plan):
-    entrenos = [
-        EntrenamientoPlanificado(
-            plan_id=plan.id,
-            fecha=date(2026, 1, 6),
-            tipo_sesion="rodaje",
-            volumen_objetivo=12,
-            ritmo_objetivo=300
-        ),
-        EntrenamientoPlanificado(
-            plan_id=plan.id,
-            fecha=date(2026, 1, 8),
-            tipo_sesion="series",
-            detalle_series="6x1000",
-            ritmo_objetivo=195
-        ),
-    ]
+    entrenos = []
+    fecha_base = plan.fecha_inicio
+
+    for semana in range(1, 9):
+        inicio_semana = fecha_base + timedelta(weeks=semana - 1)
+
+        entrenos.append(
+            EntrenamientoPlanificado(
+                plan_id=plan.id,
+                fecha=inicio_semana + timedelta(days=1),
+                tipo_sesion="rodaje",
+                volumen_objetivo=10 + semana,
+                ritmo_objetivo=300
+            )
+        )
+
+        entrenos.append(
+            EntrenamientoPlanificado(
+                plan_id=plan.id,
+                fecha=inicio_semana + timedelta(days=3),
+                tipo_sesion="series",
+                detalle_series="6x1000",
+                ritmo_objetivo=195
+            )
+        )
+
+        entrenos.append(
+            EntrenamientoPlanificado(
+                plan_id=plan.id,
+                fecha=inicio_semana + timedelta(days=5),
+                tipo_sesion="rodaje",
+                volumen_objetivo=14 + semana * 1.5,
+                ritmo_objetivo=310
+            )
+        )
 
     session.add_all(entrenos)
     session.commit()
+
 def crear_entrenamiento_real(session, atleta):
     entreno = EntrenamientoRealizado(
         atleta_id=atleta.id,
         fecha=date(2026, 1, 6),
         origen="manual",
+        tipo_sesion="rodaje",
         distancia_km=11.5,
         tiempo_seg=3450,
         ritmo_medio=300,
-        sensacion=6
+        sensacion=6,
+        comentarios="Rodaje comodo"
     )
 
     session.add(entreno)

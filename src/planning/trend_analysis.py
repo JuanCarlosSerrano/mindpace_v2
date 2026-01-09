@@ -1,11 +1,13 @@
 def analizar_tendencia_semanal(analisis_semanal: dict):
     """
     Añade información de tendencia comparando semanas consecutivas.
+    Detecta subida brusca y subida sostenida.
     """
     semanas = list(analisis_semanal.keys())
     resultado = {}
 
     carga_prev = None
+    subidas_consecutivas = 0  # 🔑 memoria de semanas previas
 
     for semana in semanas:
         data = analisis_semanal[semana]
@@ -21,15 +23,23 @@ def analizar_tendencia_semanal(analisis_semanal: dict):
             if variacion_pct > 0.25:
                 tendencia = "📈 subida brusca"
                 alertas.append("🚨 Progresión demasiado rápida")
-            elif variacion_pct > 0.05:
+                subidas_consecutivas += 1
+            else:
+                subidas_consecutivas = 0
+
+            if variacion_pct > 0.05 and variacion_pct <= 0.25:
                 tendencia = "⬆️ subida controlada"
             elif variacion_pct < -0.20:
                 tendencia = "📉 bajada fuerte"
                 alertas.append("⚠️ Descarga muy pronunciada")
-            elif abs(variacion_pct) <= 0.05:
+            elif variacion_pct is not None and abs(variacion_pct) <= 0.05:
                 tendencia = "➖ estable"
-            else:
+            elif variacion_pct is not None and variacion_pct < 0:
                 tendencia = "⬇️ bajada suave"
+
+            # 🔥 NUEVO: subida sostenida
+            if subidas_consecutivas >= 2:
+                alertas.append("🚨 Subida sostenida sin descarga")
 
         resultado[semana] = {
             **data,

@@ -2,15 +2,20 @@ from collections import defaultdict
 
 SESIONES_DURAS = {"series", "tempo", "intervalos"}
 
-
 def analizar_carga_semanal(plan_semanal: dict):
     """
     Añade métricas de carga y alertas a la vista semanal.
+    Detecta subida brusca y sostenida de volumen.
     """
-    semanas_ordenadas = sorted(plan_semanal.items())
+    semanas_ordenadas = sorted(
+    plan_semanal.items(),
+    key=lambda x: (int(x[0].split("-W")[0]), int(x[0].split("-W")[1]))
+    )
+
     resultado = {}
 
     volumen_prev = None
+    subidas_consecutivas = 0
 
     for semana, data in semanas_ordenadas:
         volumen = data["volumen_total"]
@@ -19,8 +24,8 @@ def analizar_carga_semanal(plan_semanal: dict):
             if tipo in SESIONES_DURAS
         )
 
-        # Índice simple de carga
-        carga = volumen + sesiones_duras * 5
+        # 🔥 Índice de carga (volumen pesa más)
+        carga = volumen * 1.5 + sesiones_duras * 5
 
         alertas = []
 
@@ -28,11 +33,19 @@ def analizar_carga_semanal(plan_semanal: dict):
         if sesiones_duras >= 3:
             alertas.append("⚠️ Demasiadas sesiones duras")
 
-        # Regla 2: salto brusco de volumen
-        if volumen_prev is not None:
-            incremento = (volumen - volumen_prev) / volumen_prev if volumen_prev > 0 else 0
-            if incremento > 0.25:
+        # Regla 2: volumen
+        if volumen_prev is not None and volumen_prev > 0:
+            incremento = (volumen - volumen_prev) / volumen_prev
+
+            if incremento > 0.10:
                 alertas.append("🚨 Aumento de volumen > 25%")
+                subidas_consecutivas += 1
+            else:
+                subidas_consecutivas = 0
+
+            # 🔥 NUEVO: subida sostenida
+            if subidas_consecutivas >= 2:
+                alertas.append("🚨 Subida sostenida de volumen")
 
         resultado[semana] = {
             **data,
@@ -42,5 +55,10 @@ def analizar_carga_semanal(plan_semanal: dict):
         }
 
         volumen_prev = volumen
-
+        print(
+            f"[CARGA] {semana} | vol={volumen:.1f} | "
+            f"carga={carga:.1f} | alertas={alertas}"
+        )
     return resultado
+
+
