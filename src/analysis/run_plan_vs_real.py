@@ -1,14 +1,8 @@
 import argparse
 from datetime import date
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from src.analysis.plan_vs_real import generar_comparacion_plan_real
-
-DATABASE_URL = "sqlite:///mindpace_dev.db"
-engine = create_engine(DATABASE_URL, echo=False)
-Session = sessionmaker(bind=engine)
+from src.db.session import SessionLocal
 
 
 def _parse_date(value: str | None) -> date | None:
@@ -27,7 +21,7 @@ def main():
     parser.add_argument("--show-ignored", action="store_true")
     args = parser.parse_args()
 
-    session = Session()
+    session = SessionLocal()
     resumen = generar_comparacion_plan_real(
         session,
         plan_id=args.plan,

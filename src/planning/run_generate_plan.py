@@ -1,20 +1,13 @@
 from datetime import date
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from src.db.session import SessionLocal
 from decimal import Decimal
 from src.db.base import Base
 from src.planning.engine import generar_plan_desde_plantilla
 from src.db.models import Atleta, PlantillaPlan, EntrenamientoPlanificado
 from sqlalchemy import extract
 
-DATABASE_URL = "sqlite:///mindpace_dev.db"
-
-engine = create_engine(DATABASE_URL, echo=False)
-Session = sessionmaker(bind=engine)
-
-
 def main():
-    session = Session()
+    session = SessionLocal()
 
     atleta = session.query(Atleta).first()
     plantilla = session.query(PlantillaPlan).first()

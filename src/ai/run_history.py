@@ -3,14 +3,8 @@ import csv
 import json
 import sys
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from src.ai.coach_actions import listar_coach_actions
-
-DATABASE_URL = "sqlite:///mindpace_dev.db"
-engine = create_engine(DATABASE_URL, echo=False)
-Session = sessionmaker(bind=engine)
+from src.db.session import SessionLocal
 
 
 def _to_dict(a):
@@ -34,7 +28,7 @@ def main():
     parser.add_argument("--output", default="-")
     args = parser.parse_args()
 
-    session = Session()
+    session = SessionLocal()
     acciones = listar_coach_actions(session, plan_id=args.plan, limit=args.limit)
     if not acciones:
         print("✅ No hay acciones registradas.")

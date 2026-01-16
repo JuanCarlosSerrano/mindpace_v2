@@ -5,15 +5,9 @@ import csv
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from src.db.models import EntrenamientoRealizado, PlanAtleta
+from src.db.session import SessionLocal
 from src.planning.backfill_real_tipo import inferir_tipo_desde_texto
-
-DATABASE_URL = "sqlite:///mindpace_dev.db"
-engine = create_engine(DATABASE_URL, echo=False)
-Session = sessionmaker(bind=engine)
 
 REQUIRED_COLUMNS = {"fecha", "distancia_km", "tiempo_seg"}
 MIN_RITMO_SEG = 120
@@ -118,7 +112,7 @@ def main():
     parser.add_argument("--strict", action="store_true")
     args = parser.parse_args()
 
-    session = Session()
+    session = SessionLocal()
 
     atleta_id = args.atleta
     if args.plan and atleta_id is None:

@@ -1,14 +1,8 @@
 import argparse
 from datetime import date
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from src.analysis.cumplimiento import calcular_cumplimiento_semanal
-
-DATABASE_URL = "sqlite:///mindpace_dev.db"
-engine = create_engine(DATABASE_URL, echo=False)
-Session = sessionmaker(bind=engine)
+from src.db.session import SessionLocal
 
 
 def _parse_date(value: str | None) -> date | None:
@@ -32,7 +26,7 @@ def main():
     parser.add_argument("--format", choices=["text", "csv", "json"], default="text")
     args = parser.parse_args()
 
-    session = Session()
+    session = SessionLocal()
     data = calcular_cumplimiento_semanal(
         session,
         plan_id=args.plan,
@@ -62,6 +56,7 @@ def main():
                 "ratio_ses",
                 "ses_plan_peso",
                 "ses_real_peso",
+                "exceso_peso",
                 "vol_plan",
                 "vol_real",
                 "ratio_vol",
@@ -78,6 +73,7 @@ def main():
                     _fmt(item["ratio_sesiones"]),
                     _fmt(item["sesiones_planificadas_peso"]),
                     _fmt(item["sesiones_realizadas_peso"]),
+                    _fmt(item["sesiones_excesivas_peso"]),
                     _fmt(item["volumen_planificado"]),
                     _fmt(item["volumen_real"]),
                     _fmt(item["ratio_volumen"]),
@@ -93,6 +89,7 @@ def main():
         "ratio_ses",
         "ses_plan_p",
         "ses_real_p",
+        "exceso_p",
         "vol_plan",
         "vol_real",
         "ratio_vol",
@@ -108,6 +105,7 @@ def main():
             "bajo_cumplimiento": "[LOW]",
             "exceso": "[HIGH]",
             "no_evaluable": "[NA]",
+            "datos_insuficientes": "[NO_DATA]",
         }.get(estado, "[?]")
         rows.append(
             [
@@ -117,6 +115,7 @@ def main():
                 _fmt(item["ratio_sesiones"]),
                 _fmt(item["sesiones_planificadas_peso"]),
                 _fmt(item["sesiones_realizadas_peso"]),
+                _fmt(item["sesiones_excesivas_peso"]),
                 _fmt(item["volumen_planificado"]),
                 _fmt(item["volumen_real"]),
                 _fmt(item["ratio_volumen"]),

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Iterable
 
@@ -139,7 +139,7 @@ def revertir_semana(session: Session, plan_id: int, semana: str) -> dict:
 def resumen_memoria_actions(
     session: Session, plan_id: int, dias: int = 21
 ) -> dict:
-    ahora = datetime.utcnow()
+    ahora = datetime.now(timezone.utc)
     limite = ahora - timedelta(days=dias)
     acciones = (
         session.query(CoachAction)

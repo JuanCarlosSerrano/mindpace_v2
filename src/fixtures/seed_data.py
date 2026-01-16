@@ -1,5 +1,6 @@
 from datetime import date
 from datetime import timedelta
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -15,7 +16,8 @@ from src.db.models import (
 )
 
 
-DATABASE_URL = "sqlite:///mindpace_dev.db"
+DB_PATH = os.getenv("DB_PATH", "mindpace_dev.db")
+DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(DATABASE_URL, echo=False)
 Session = sessionmaker(bind=engine)

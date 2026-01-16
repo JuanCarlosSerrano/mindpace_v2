@@ -108,6 +108,20 @@ La semana es la **unidad principal de decisión** para el CoachAI.
 | 🟡 **Parcial** | ratio 0.7–0.9 o sesiones faltantes |
 | 🔴 **Bajo cumplimiento** | ratio <0.7 |
 | 🚨 **Exceso** | ratio >1.2 o muchas sesiones excesivas |
+| ⚪ **Datos insuficientes** | 0 sesiones reales y 0 volumen real |
+
+### 4.3 Calidad de datos (cobertura minima)
+
+Antes de activar ajustes automaticos, se exige una cobertura minima de datos reales:
+
+- Minimo de sesiones reales por semana: 3 (o todas si la semana tiene menos de 3 planificadas).
+- Ratio de sesiones ponderado >= 0.50.
+
+Si no se cumple, el CoachAI entra en modo conservador y no aplica ajustes automaticos
+en esa semana. Solo se sugiere importar entrenamientos reales.
+
+Excepcion: si hay alertas fuertes de riesgo (marcadas con 🚨), se permiten ajustes
+suaves aunque falte cobertura, para no ignorar semanas potencialmente peligrosas.
 
 ---
 

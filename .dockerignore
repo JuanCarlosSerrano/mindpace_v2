@@ -1,0 +1,13 @@
+.venv
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.git/
+.DS_Store
+frontend/node_modules/
+frontend/dist/
+mindpace_dev.db
+mindpace.db
+db.png
+data/

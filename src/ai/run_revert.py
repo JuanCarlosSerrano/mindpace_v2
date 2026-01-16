@@ -1,14 +1,8 @@
 import argparse
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from src.ai.coach_actions import revertir_coach_actions
 from src.db.models import CoachAction
-
-DATABASE_URL = "sqlite:///mindpace_dev.db"
-engine = create_engine(DATABASE_URL, echo=False)
-Session = sessionmaker(bind=engine)
+from src.db.session import SessionLocal
 
 
 def _parse_ids(value: str) -> list[int]:
@@ -26,7 +20,7 @@ def main():
     parser.add_argument("--reason", default="")
     args = parser.parse_args()
 
-    session = Session()
+    session = SessionLocal()
 
     acciones = _resolve_actions(session, args)
     if args.dry_run:

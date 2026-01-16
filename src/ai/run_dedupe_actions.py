@@ -1,19 +1,13 @@
 from collections import defaultdict
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from src.db.models import CoachAction
-
-DATABASE_URL = "sqlite:///mindpace_dev.db"
-engine = create_engine(DATABASE_URL, echo=False)
-Session = sessionmaker(bind=engine)
+from src.db.session import SessionLocal
 
 PLAN_ID = 2  # cambia si quieres
 
 
 def main():
-    session = Session()
+    session = SessionLocal()
     acciones = (
         session.query(CoachAction)
         .filter(CoachAction.plan_id == PLAN_ID)

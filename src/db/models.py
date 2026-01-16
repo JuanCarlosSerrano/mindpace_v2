@@ -1,9 +1,9 @@
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from sqlalchemy.orm import validates
 from decimal import Decimal
 from sqlalchemy import (
     String, Integer, Date, Boolean, ForeignKey,
-    Enum, Text, DECIMAL, TIMESTAMP, JSON
+    Enum, Text, DECIMAL, TIMESTAMP, JSON, UniqueConstraint
 )
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -21,7 +21,7 @@ class Usuario(Base):
     )
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
     fecha_alta: Mapped[datetime] = mapped_column(
-        TIMESTAMP, default=datetime.utcnow
+        TIMESTAMP, default=lambda: datetime.now(timezone.utc)
     )
 
     atleta = relationship(
@@ -185,6 +185,32 @@ class EntrenamientoRealizado(Base):
     )
     match_confianza: Mapped[float | None] = mapped_column(DECIMAL(4, 2))
     match_metodo: Mapped[str | None] = mapped_column(String(20))
+
+
+class AthleteFeedback(Base):
+    __tablename__ = "athlete_feedback"
+    __table_args__ = (
+        UniqueConstraint("athlete_id", "session_date", name="uq_feedback_athlete_date"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    athlete_id: Mapped[int] = mapped_column(ForeignKey("atletas.id"))
+    plan_id: Mapped[int | None] = mapped_column(ForeignKey("planes_atleta.id"))
+    session_date: Mapped[Date] = mapped_column(Date)
+
+    rpe: Mapped[int | None]
+    mood: Mapped[int | None]
+    fatigue: Mapped[int | None]
+    soreness: Mapped[int | None]
+    pain_flag: Mapped[bool] = mapped_column(Boolean, default=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, default=lambda: datetime.now(timezone.utc)
+    )
 class ComparacionPlanReal(Base):
     __tablename__ = "comparacion_plan_real"
 
@@ -209,7 +235,7 @@ class ComparacionPlanReal(Base):
 
     sensacion: Mapped[int | None]
     created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP, default=datetime.utcnow
+        TIMESTAMP, default=lambda: datetime.now(timezone.utc)
     )
 
     cumplimiento_pct: Mapped[float | None] = mapped_column(DECIMAL(5, 2))
@@ -260,5 +286,5 @@ class CoachAction(Base):
         default="aplicada"
     )
     created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP, default=datetime.utcnow
+        TIMESTAMP, default=lambda: datetime.now(timezone.utc)
     )

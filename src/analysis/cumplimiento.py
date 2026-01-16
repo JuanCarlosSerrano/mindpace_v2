@@ -71,6 +71,7 @@ def calcular_cumplimiento_semanal(
                 "volumen_real": Decimal("0"),
                 "ratio_volumen": None,
                 "sesiones_excesivas": 0,
+                "sesiones_excesivas_peso": Decimal("0"),
                 "sesiones_no_realizadas": 0,
                 "estado": "no_evaluable",
             },
@@ -95,6 +96,7 @@ def calcular_cumplimiento_semanal(
             ratio = Decimal(str(comp.pct_dist))
             if ratio > SESION_EXCESO_MIN:
                 item["sesiones_excesivas"] += 1
+                item["sesiones_excesivas_peso"] += peso
 
     for semana, item in semanas.items():
         sp = item["sesiones_planificadas"]
@@ -116,11 +118,17 @@ def calcular_cumplimiento_semanal(
         ratio_vol = item["ratio_volumen"]
         ratio_ses = item["ratio_sesiones"]
         excesivas = item["sesiones_excesivas"]
+        excesivas_peso = item["sesiones_excesivas_peso"]
         muchas_excesivas = excesivas >= 2 or (
-            sp > 0 and Decimal(excesivas) / Decimal(sp) >= Decimal("0.30")
+            item["sesiones_planificadas_peso"] > 0
+            and excesivas_peso / item["sesiones_planificadas_peso"] >= Decimal("0.30")
         )
 
-        if ratio_vol is None or ratio_ses is None:
+        if item["sesiones_realizadas"] == 0 and item["volumen_real"] == 0:
+            item["ratio_sesiones"] = None
+            item["ratio_volumen"] = None
+            item["estado"] = "datos_insuficientes"
+        elif ratio_vol is None or ratio_ses is None:
             item["estado"] = "no_evaluable"
         elif ratio_vol > SESION_EXCESO_MIN or muchas_excesivas:
             item["estado"] = "exceso"
@@ -138,5 +146,6 @@ def calcular_cumplimiento_semanal(
         item["volumen_real"] = float(item["volumen_real"])
         item["sesiones_planificadas_peso"] = float(item["sesiones_planificadas_peso"])
         item["sesiones_realizadas_peso"] = float(item["sesiones_realizadas_peso"])
+        item["sesiones_excesivas_peso"] = float(item["sesiones_excesivas_peso"])
 
     return semanas

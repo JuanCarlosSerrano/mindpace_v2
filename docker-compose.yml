@@ -1,0 +1,31 @@
+services:
+  api:
+    build: .
+    container_name: mindpace_api
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_PATH=/app/data/mindpace_dev.db
+      - PYTHONPATH=/app
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request as u; u.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build: ./frontend
+    container_name: mindpace_web
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/index.html > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
