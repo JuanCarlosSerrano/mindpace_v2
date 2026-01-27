@@ -42,3 +42,5 @@ export async function apiFetch<T>(
 
   return data as T;
 }
+
+export const client = apiFetch;

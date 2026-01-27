@@ -18,6 +18,7 @@ from src.feedback.repo import summarize_feedback_week
 
 MIN_SESIONES_REALES_PARA_AJUSTES = 3
 MIN_RATIO_SESIONES_PARA_AJUSTES = Decimal("0.50")
+MIN_RATIO_SESIONES_PONDERADAS_SUAVE = Decimal("0.70")
 
 
 @dataclass
@@ -73,12 +74,13 @@ class CoachAI:
         evaluacion = self.evaluar_plan(session, plan_id)
         tendencia = evaluacion["tendencia"]
         plan_semanal = evaluacion["plan_semanal"]
-        semanas_ajustadas = self._semanas_ajustadas_recientes(session, plan_id)
+        semanas_ajustadas = self._semanas_ajustadas_memoria(session, plan_id)
         memoria = resumen_memoria_actions(session, plan_id, dias=21)
         cumplimiento = evaluacion.get("cumplimiento", {})
         feedback = self._feedback_por_semana(
             session, plan_id, plan_semanal, tendencia
         )
+        semanas_descarga = self._semanas_descarga_aplicadas(session, plan_id)
 
         recomendaciones: list[CoachRecommendation] = []
 
@@ -111,6 +113,11 @@ class CoachAI:
                 acciones = _modular_acciones_por_cumplimiento(
                     acciones, cumplimiento.get(semana)
                 )
+                acciones = _evitar_descarga_consecutiva(
+                    acciones, semana, semanas_descarga
+                )
+                if "Semana marcada como descarga" in acciones:
+                    semanas_descarga.add(semana)
                 ajustes_semanales[semana] = {"acciones": acciones}
 
         for semana, ajuste in ajustes_semanales.items():
@@ -148,10 +155,15 @@ class CoachAI:
             acciones = _modular_acciones_por_cumplimiento(
                 acciones, cumplimiento.get(semana)
             )
+            acciones = _evitar_descarga_consecutiva(
+                acciones, semana, semanas_descarga
+            )
             if no_data:
                 acciones = _filtrar_acciones_no_data(acciones)
                 if not acciones:
                     acciones = ["Importar entrenamientos reales para evaluar cumplimiento"]
+            if "Semana marcada como descarga" in acciones:
+                semanas_descarga.add(semana)
 
             reason = _reason_from_cumplimiento(cumplimiento.get(semana))
             explicacion = (
@@ -293,15 +305,12 @@ class CoachAI:
         recomendaciones = apply_feedback_modulation(recomendaciones, weekly_summary_by_week)
         return classify_recommendations(recomendaciones)
 
-    def _semanas_ajustadas_recientes(self, session: Session, plan_id: int) -> set[str]:
-        ahora = datetime.now(timezone.utc)
-        limite = ahora - timedelta(days=7)
+    def _semanas_ajustadas_memoria(self, session: Session, plan_id: int) -> set[str]:
         recs = (
             session.query(CoachAction)
             .filter(CoachAction.plan_id == plan_id)
             .filter(CoachAction.estado == "aplicada")
             .filter(CoachAction.tipo.in_(("semanal", "diaria")))
-            .filter(CoachAction.created_at >= limite)
             .all()
         )
 
@@ -309,8 +318,28 @@ class CoachAI:
         for a in recs:
             if a.semana:
                 semanas.add(a.semana)
+                continue
+            if a.fecha:
+                semanas.add(_week_key(a.fecha))
         return semanas
 
+    def _semanas_descarga_aplicadas(self, session: Session, plan_id: int) -> set[str]:
+        acciones = (
+            session.query(CoachAction)
+            .filter(CoachAction.plan_id == plan_id)
+            .filter(CoachAction.estado == "aplicada")
+            .filter(CoachAction.tipo.in_(("semanal", "diaria")))
+            .all()
+        )
+        semanas = set()
+        for a in acciones:
+            textos = _acciones_desde_action(a)
+            if any("semana marcada como descarga" in t.lower() for t in textos):
+                if a.semana:
+                    semanas.add(a.semana)
+                elif a.fecha:
+                    semanas.add(_week_key(a.fecha))
+        return semanas
     def _feedback_por_semana(self, session: Session, plan_id: int, plan_semanal: dict, tendencia: dict) -> dict:
         plan = session.get(PlanAtleta, plan_id)
         atleta_id = plan.atleta_id if plan else None
@@ -333,7 +362,12 @@ class CoachAI:
 def _cumplimiento_bajo(cumplimiento_semana: dict | None) -> bool:
     if not cumplimiento_semana:
         return False
-    return cumplimiento_semana.get("estado") in ("bajo_cumplimiento", "parcial")
+    if cumplimiento_semana.get("estado") in ("bajo_cumplimiento", "parcial"):
+        return True
+    ratio_peso = _ratio_sesiones_peso(cumplimiento_semana)
+    if ratio_peso is not None and ratio_peso < MIN_RATIO_SESIONES_PONDERADAS_SUAVE:
+        return True
+    return False
 
 
 def _cumplimiento_no_data(cumplimiento_semana: dict | None) -> bool:
@@ -357,7 +391,9 @@ def _cobertura_suficiente(cumplimiento_semana: dict | None) -> bool:
     if ratio_sesiones is None:
         return False
     try:
-        ratio_valor = Decimal(str(ratio_sesiones))
+        ratio_valor = _ratio_sesiones_peso(cumplimiento_semana) or Decimal(
+            str(ratio_sesiones)
+        )
     except Exception:
         return False
     return ratio_valor >= MIN_RATIO_SESIONES_PARA_AJUSTES
@@ -408,6 +444,34 @@ def _week_range(week_key: str) -> tuple[date, date]:
     start = date.fromisocalendar(int(year), int(week), 1)
     end = start + timedelta(days=6)
     return start, end
+
+
+def _week_key(d: date) -> str:
+    y, w, _ = d.isocalendar()
+    return f"{y}-W{w:02d}"
+
+
+def _prev_week_key(week_key: str) -> str:
+    start, _ = _week_range(week_key)
+    prev = start - timedelta(days=7)
+    return _week_key(prev)
+
+
+def _ratio_sesiones_peso(cumplimiento_semana: dict | None) -> Decimal | None:
+    if not cumplimiento_semana:
+        return None
+    plan_peso = cumplimiento_semana.get("sesiones_planificadas_peso")
+    real_peso = cumplimiento_semana.get("sesiones_realizadas_peso")
+    if plan_peso in (None, 0):
+        return None
+    try:
+        plan_val = Decimal(str(plan_peso))
+        real_val = Decimal(str(real_peso or 0))
+    except Exception:
+        return None
+    if plan_val <= 0:
+        return None
+    return (real_val / plan_val).quantize(Decimal("0.01"))
 
 
 def apply_feedback_modulation(
@@ -583,6 +647,7 @@ def _modular_acciones_por_cumplimiento(
     if not acciones:
         return acciones
     estado = (cumplimiento_semana or {}).get("estado")
+    ratio_peso = _ratio_sesiones_peso(cumplimiento_semana)
     if estado in ("datos_insuficientes", "no_evaluable"):
         # No castigar cuando falta informacion: evitar reducciones fuertes.
         return _filtrar_acciones_no_data(acciones)
@@ -598,6 +663,19 @@ def _modular_acciones_por_cumplimiento(
             if not ("eliminar" in a.lower() and "sesión" in a.lower() and "dura" in a.lower())
         ]
         return acciones
+    if ratio_peso is not None and ratio_peso < MIN_RATIO_SESIONES_PONDERADAS_SUAVE:
+        # Sesiones clave (series/tempo/umbral) no se han cumplido lo suficiente.
+        acciones = [
+            a
+            for a in acciones
+            if not ("reducir volumen" in a.lower())
+            and not (
+                "eliminar" in a.lower()
+                and "sesión" in a.lower()
+                and "dura" in a.lower()
+            )
+        ]
+        return acciones
     if estado == "exceso":
         # Forzar descarga y reducir sesiones duras.
         if not any("descarga" in a.lower() for a in acciones):
@@ -607,3 +685,37 @@ def _modular_acciones_por_cumplimiento(
         if not any("reducir volumen" in a.lower() for a in acciones):
             acciones.append("Reducir volumen semanal un 10%")
     return acciones
+
+
+def _acciones_desde_action(action: CoachAction) -> list[str]:
+    raw = action.acciones
+    if isinstance(raw, list):
+        return [str(a) for a in raw]
+    if isinstance(raw, dict):
+        if isinstance(raw.get("acciones"), list):
+            return [str(a) for a in raw["acciones"]]
+        acciones = []
+        for value in raw.values():
+            if isinstance(value, list):
+                acciones.extend([str(a) for a in value])
+            elif isinstance(value, str):
+                acciones.append(value)
+        return acciones
+    if isinstance(raw, str):
+        return [raw]
+    return []
+
+
+def _evitar_descarga_consecutiva(
+    acciones: list[str],
+    semana: str,
+    semanas_descarga: set[str],
+) -> list[str]:
+    if not acciones:
+        return acciones
+    if "Semana marcada como descarga" not in acciones:
+        return acciones
+    prev = _prev_week_key(semana)
+    if prev not in semanas_descarga:
+        return acciones
+    return [a for a in acciones if "descarga" not in a.lower()]

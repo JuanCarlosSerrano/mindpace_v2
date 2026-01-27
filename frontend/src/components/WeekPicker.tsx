@@ -1,18 +1,14 @@
 type Props = {
   planId: number;
-  athleteId: number;
   isoWeek: string;
   onPlanIdChange: (value: number) => void;
-  onAthleteIdChange: (value: number) => void;
   onWeekChange: (value: string) => void;
 };
 
 export default function WeekPicker({
   planId,
-  athleteId,
   isoWeek,
   onPlanIdChange,
-  onAthleteIdChange,
   onWeekChange,
 }: Props) {
   return (
@@ -23,14 +19,6 @@ export default function WeekPicker({
           type="number"
           value={planId}
           onChange={(e) => onPlanIdChange(Number(e.target.value))}
-        />
-      </div>
-      <div>
-        <label>Athlete ID</label>
-        <input
-          type="number"
-          value={athleteId}
-          onChange={(e) => onAthleteIdChange(Number(e.target.value))}
         />
       </div>
       <div>

@@ -137,6 +137,7 @@ def generar_plan_desde_plantilla(
             volumen_objetivo=volumen_obj,
             ritmo_objetivo=ritmo_obj,
             detalle_series=s.formato_series,
+            blocks_json=s.blocks_json or [],
             comentarios_entrenador=None,
         )
         session.add(entreno)

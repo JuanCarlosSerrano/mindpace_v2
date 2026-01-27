@@ -48,6 +48,7 @@ CREATE TABLE plantillas_sesiones (
     intensidad_pct_vam DECIMAL(5,2),
     formato_series VARCHAR(100),
     recuperacion_seg INT,
+    blocks_json JSON,
 
     FOREIGN KEY (plantilla_id) REFERENCES plantillas_plan(id)
 );
@@ -74,6 +75,7 @@ CREATE TABLE entrenamientos_planificados (
     volumen_objetivo DECIMAL(6,2),
     ritmo_objetivo INT, -- segundos por km
     detalle_series VARCHAR(150),
+    blocks_json JSON,
 
     comentarios_entrenador TEXT,
     realizado_id INT,
@@ -174,4 +176,44 @@ CREATE TABLE coach_actions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (plan_id) REFERENCES planes_atleta(id)
+);
+
+CREATE TABLE templates_catalog (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    description TEXT,
+    goal VARCHAR(50),
+    level VARCHAR(20),
+    duration_weeks INT,
+    tags_json JSON,
+    estimated_weekly_load DECIMAL(6,2),
+    source_key VARCHAR(50),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE sessions_catalog (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    description TEXT,
+    tipo_sesion VARCHAR(50),
+    volumen_base DECIMAL(6,2),
+    intensidad_pct_vam DECIMAL(5,2),
+    formato_series VARCHAR(100),
+    recuperacion_seg INT,
+    tags_json JSON,
+    blocks_json JSON,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE session_presets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    entrenador_id INT NOT NULL,
+    label VARCHAR(120) NOT NULL,
+    tipo_sesion VARCHAR(50),
+    volumen_base DECIMAL(6,2),
+    intensidad_pct_vam DECIMAL(5,2),
+    formato_series VARCHAR(100),
+    recuperacion_seg INT,
+    tags_json JSON,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -4,7 +4,7 @@ import os
 from fastapi import FastAPI
 from sqlalchemy import inspect
 
-from src.api.routers import coach, dashboard, feedback
+from src.api.routers import coach, dashboard, feedback, templates, sessions, session_presets
 from src.db.session import engine
 
 app = FastAPI(title="MindPace v2 API", version="0.1")
@@ -12,6 +12,9 @@ app = FastAPI(title="MindPace v2 API", version="0.1")
 app.include_router(dashboard.router, prefix="/api/v1")
 app.include_router(feedback.router, prefix="/api/v1")
 app.include_router(coach.router, prefix="/api/v1")
+app.include_router(templates.router, prefix="/api/v1")
+app.include_router(sessions.router, prefix="/api/v1")
+app.include_router(session_presets.router, prefix="/api/v1")
 
 logger = logging.getLogger(__name__)
 

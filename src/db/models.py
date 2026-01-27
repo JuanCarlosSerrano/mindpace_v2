@@ -99,6 +99,7 @@ class PlantillaSesion(Base):
     intensidad_pct_vam: Mapped[float | None] = mapped_column(DECIMAL(5, 2))
     formato_series: Mapped[str | None] = mapped_column(String(100))
     recuperacion_seg: Mapped[int | None]
+    blocks_json: Mapped[list[dict] | None] = mapped_column(JSON)
 
     plantilla = relationship("PlantillaPlan", back_populates="sesiones")
 class PlanAtleta(Base):
@@ -130,6 +131,7 @@ class EntrenamientoPlanificado(Base):
     volumen_objetivo: Mapped[float | None] = mapped_column(DECIMAL(6, 2))
     ritmo_objetivo: Mapped[int | None]
     detalle_series: Mapped[str | None] = mapped_column(String(150))
+    blocks_json: Mapped[list[dict] | None] = mapped_column(JSON)
     comentarios_entrenador: Mapped[str | None] = mapped_column(Text)
     realizado_id: Mapped[int | None] = mapped_column(
         ForeignKey(
@@ -286,5 +288,57 @@ class CoachAction(Base):
         default="aplicada"
     )
     created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class TemplateCatalog(Base):
+    __tablename__ = "templates_catalog"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    goal: Mapped[str | None] = mapped_column(String(50))
+    level: Mapped[str | None] = mapped_column(String(20))
+    duration_weeks: Mapped[int | None]
+    tags_json: Mapped[list[str] | None] = mapped_column(JSON)
+    estimated_weekly_load: Mapped[float | None] = mapped_column(DECIMAL(6, 2))
+    source_key: Mapped[str | None] = mapped_column(String(50))
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class SessionCatalog(Base):
+    __tablename__ = "sessions_catalog"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    tipo_sesion: Mapped[str | None] = mapped_column(String(50))
+    volumen_base: Mapped[float | None] = mapped_column(DECIMAL(6, 2))
+    intensidad_pct_vam: Mapped[float | None] = mapped_column(DECIMAL(5, 2))
+    formato_series: Mapped[str | None] = mapped_column(String(100))
+    recuperacion_seg: Mapped[int | None]
+    tags_json: Mapped[list[str] | None] = mapped_column(JSON)
+    blocks_json: Mapped[list[dict] | None] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class SessionPreset(Base):
+    __tablename__ = "session_presets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    entrenador_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"))
+    label: Mapped[str] = mapped_column(String(120), nullable=False)
+    tipo_sesion: Mapped[str | None] = mapped_column(String(50))
+    volumen_base: Mapped[float | None] = mapped_column(DECIMAL(6, 2))
+    intensidad_pct_vam: Mapped[float | None] = mapped_column(DECIMAL(5, 2))
+    formato_series: Mapped[str | None] = mapped_column(String(100))
+    recuperacion_seg: Mapped[int | None]
+    tags_json: Mapped[list[str] | None] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, default=lambda: datetime.now(timezone.utc)
     )

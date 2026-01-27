@@ -205,6 +205,22 @@ def build_weekly_summary(
         round(sesiones_real / sesiones_plan, 2) if sesiones_plan else None
     )
 
+    plan_detail = []
+    for e in plan_item.get("entrenamientos", []):
+        plan_detail.append(
+            {
+                "id": e.id,
+                "date": e.fecha.isoformat(),
+                "tipo_sesion": e.tipo_sesion,
+                "volumen_objetivo": float(e.volumen_objetivo or 0)
+                if e.volumen_objetivo is not None
+                else None,
+                "ritmo_objetivo": e.ritmo_objetivo,
+                "detalle_series": e.detalle_series,
+                "blocks": e.blocks_json or [],
+            }
+        )
+
     summary = {
         "meta": {
             "plan_id": plan_id,
@@ -222,7 +238,7 @@ def build_weekly_summary(
             "by_type": {
                 k: int(v) for k, v in plan_item.get("por_tipo", {}).items()
             },
-            "sessions_detail": [],
+            "sessions_detail": plan_detail,
         },
         "real": {
             "sessions_count": len(reales),

@@ -32,6 +32,7 @@ export type WeeklySummary = {
     sessions_count: number;
     volume_km_total: number;
     by_type: Record<string, number>;
+    sessions_detail?: PlanSessionDetail[];
   };
   real: {
     sessions_count: number;
@@ -83,6 +84,16 @@ export type WeeklySummary = {
   };
 };
 
+export type PlanSessionDetail = {
+  id: number;
+  date: string;
+  tipo_sesion?: string | null;
+  volumen_objetivo?: number | null;
+  ritmo_objetivo?: number | null;
+  detalle_series?: string | null;
+  blocks?: Array<Record<string, unknown>>;
+};
+
 export type FeedbackPayload = {
   date: string;
   plan_id?: number;
@@ -104,4 +115,73 @@ export type CoachRevertPayload = {
   ids?: number[];
   last?: number;
   yes?: boolean;
+};
+
+export type TemplateSummary = {
+  id: number;
+  name: string;
+  description?: string | null;
+  goal?: string | null;
+  level?: string | null;
+  duration_weeks?: number | null;
+  tags: string[];
+  estimated_weekly_load?: number | null;
+  source_key?: string | null;
+  updated_at?: string | null;
+};
+
+export type TemplatePreview = TemplateSummary & {
+  weekly_preview: Array<{
+    week: number;
+    load: number;
+    focus_tags: string[];
+  }>;
+};
+
+export type TemplatesResponse = {
+  items: TemplateSummary[];
+  total: number;
+};
+
+export type TemplateMeta = {
+  goals: string[];
+  levels: string[];
+  tags: string[];
+};
+
+export type SessionSummary = {
+  id: number;
+  name: string;
+  description?: string | null;
+  tipo_sesion?: string | null;
+  volumen_base?: number | null;
+  intensidad_pct_vam?: number | null;
+  formato_series?: string | null;
+  recuperacion_seg?: number | null;
+  tags: string[];
+  blocks?: Array<Record<string, unknown>>;
+  updated_at?: string | null;
+};
+
+export type SessionsResponse = {
+  items: SessionSummary[];
+  total: number;
+};
+
+export type SessionPreset = {
+  id: number;
+  entrenador_id: number;
+  label: string;
+  tipo_sesion?: string | null;
+  volumen_base?: number | null;
+  intensidad_pct_vam?: number | null;
+  formato_series?: string | null;
+  recuperacion_seg?: number | null;
+  tags: string[];
+  updated_at?: string | null;
+};
+
+export type SessionPresetsResponse = {
+  items: SessionPreset[];
+  total: number;
 };
